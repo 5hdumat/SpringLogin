@@ -2,6 +2,7 @@ package hello.login.web.login;
 
 import hello.login.domain.login.LoginService;
 import hello.login.domain.member.Member;
+import hello.login.web.SessionConst;
 import hello.login.web.session.SessionManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 @Slf4j
 @Controller
@@ -28,9 +30,9 @@ public class LoginController {
         return "login/loginForm";
     }
 
-//    @PostMapping("/login")
+    //    @PostMapping("/login")
     public String login(@Validated @ModelAttribute LoginForm loginForm, BindingResult bindingResult, HttpServletResponse response) {
-        if(bindingResult.hasErrors()) {
+        if (bindingResult.hasErrors()) {
             return "login/loginForm";
         }
 
@@ -53,14 +55,13 @@ public class LoginController {
         return "redirect:/";
     }
 
-    @PostMapping("/login")
+    //    @PostMapping("/login")
     public String loginV2(@Validated @ModelAttribute LoginForm loginForm, BindingResult bindingResult, HttpServletResponse response) {
-        if(bindingResult.hasErrors()) {
+        if (bindingResult.hasErrors()) {
             return "login/loginForm";
         }
 
         Member loginMember = loginService.login(loginForm.getLoginId(), loginForm.getPassword());
-        log.info("login? {}", loginMember);
 
         if (loginMember == null) {
             bindingResult.reject("loginFail", "아이디 또는 비밀번호가 맞지 않습니다.");
@@ -76,16 +77,65 @@ public class LoginController {
         return "redirect:/";
     }
 
-//    @PostMapping("/logout")
+    @PostMapping("/login")
+    public String loginV3(@Validated @ModelAttribute LoginForm loginForm, BindingResult bindingResult, HttpServletRequest request) {
+        if (bindingResult.hasErrors()) {
+            return "login/loginForm";
+        }
+
+        Member loginMember = loginService.login(loginForm.getLoginId(), loginForm.getPassword());
+
+        if (loginMember == null) {
+            bindingResult.reject("loginFail", "아이디 또는 비밀번호가 맞지 않습니다.");
+            return "login/loginForm";
+        }
+
+        // 로그인 성공 처리
+        // 세션이 있으면 있는 세션을 반환 하고, 없으면 신규 세션을 생성 후 반환
+
+        /**
+         * 세션의 create 옵션에 대해 알아보자.
+         *
+         * request.getSession(true)
+         * - 세션이 있으면 기존 세션을 반환한다.
+         * - 세션이 없으면 새로운 세션을 생성해서 반환한다.
+         * request.getSession(false)
+         * - 세션이 있으면 기존 세션을 반환한다.
+         * - 세션이 없으면 새로운 세션을 생성하지 않는다. null 을 반환한다.
+         */
+        HttpSession session = request.getSession();
+        log.info("session = {}", session);
+
+        // 세션에 로그인 회원 정보 보관
+        // setAttribute는 세션 영역에 속성 값을 설정할 때 setAttribute()함수를 이용한
+        session.setAttribute(SessionConst.LOGIN_MEMBER, loginMember);
+
+        return "redirect:/";
+    }
+
+
+    //    @PostMapping("/logout")
     public String logout(HttpServletResponse response) {
         expireCookie(response, "memberId");
 
         return "redirect:/";
     }
 
-    @PostMapping("/logout")
+    //    @PostMapping("/logout")
     public String logoutV2(HttpServletRequest request) {
         sessionManager.expire(request);
+
+        return "redirect:/";
+    }
+
+    @PostMapping("/logout")
+    public String logoutV3(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+
+        if (session != null) {
+            // 세션과 데이터를 모두 날린다.
+            session.invalidate();
+        }
 
         return "redirect:/";
     }
