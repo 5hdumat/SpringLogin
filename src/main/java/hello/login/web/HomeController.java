@@ -2,6 +2,7 @@ package hello.login.web;
 
 import hello.login.domain.member.Member;
 import hello.login.domain.member.MemberRepository;
+import hello.login.web.argumentresolver.Login;
 import hello.login.web.session.SessionManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -88,7 +89,7 @@ public class HomeController {
      *
      * 참고) @SessionAttribute는 세션이 없을 때 따로 생성하지 않는다.
      */
-    @GetMapping("/")
+//    @GetMapping("/")
     public String homeLoginV3Spring(@SessionAttribute(name = SessionConst.LOGIN_MEMBER, required = false) Member loginMember, Model model) {
 //        HttpSession session = request.getSession(false);
 //
@@ -101,6 +102,27 @@ public class HomeController {
 //
 //        Member loginMember = (Member) session.getAttribute(SessionConst.LOGIN_MEMBER);
 
+        // 로그인 쿠키(memberId)가 없는 사용자는 기존 home 으로 보낸다.
+        if (loginMember == null) {
+            return "/home";
+        }
+
+        // 세션이 유지되면 홈화면으로 이동
+        model.addAttribute("member", loginMember);
+        return "/loginHome";
+    }
+
+    /**
+     *  * homeLoginV3 메서드의 파라미터를 보면 세션까지 고민해야하고, 코드가 상당히 복잡하다.
+     *      *   -> @SessionAttribute(name = SessionConst.LOGIN_MEMBER, required = false) Member loginMember
+     *
+     * 애노테이션 기반 컨트롤러를 처리하는 RequestMappingHandlerAdaptor 는 ArgumentResolver 를 호출해서
+     * 컨트롤러(핸들러)가 필요로 하는 다양한 파라미터의 값(객체)을 생성한다.
+     * 그리고 이렇게 파리미터의 값이 모두 준비되면 컨트롤러(핸들러)를 호출하면서 값을 넘겨준다.
+     * 메서드의 Argument들을 동적으로 주입시켜주는 ArgumentResolver를 활용해보자.
+     */
+    @GetMapping("/")
+    public String homeLoginV3ArgumentResolver(@Login Member loginMember, Model model) {
         // 로그인 쿠키(memberId)가 없는 사용자는 기존 home 으로 보낸다.
         if (loginMember == null) {
             return "/home";
